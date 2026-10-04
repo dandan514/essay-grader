@@ -1,0 +1,1082 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>智能英语作文批改系统</title>
+  <style>
+    /* ===== 全局样式 ===== */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+      color: #333;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    /* ===== 头部 ===== */
+    .header {
+      text-align: center;
+      color: white;
+      margin-bottom: 30px;
+      padding: 30px 0;
+    }
+
+    .header h1 {
+      font-size: 2.2em;
+      margin-bottom: 10px;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    .header p {
+      font-size: 1.1em;
+      opacity: 0.9;
+    }
+
+    .topic-box {
+      background: rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(10px);
+      border-radius: 12px;
+      padding: 15px 25px;
+      margin-top: 20px;
+      display: inline-block;
+    }
+
+    .topic-box span {
+      font-weight: bold;
+      font-size: 1.05em;
+    }
+
+    /* ===== 卡片通用样式 ===== */
+    .card {
+      background: white;
+      border-radius: 16px;
+      padding: 30px;
+      margin-bottom: 25px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+    }
+
+    .card-title {
+      font-size: 1.4em;
+      color: #4a5568;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .card-title .icon {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 1.2em;
+    }
+
+    /* ===== 上传区域 ===== */
+    .upload-area {
+      border: 3px dashed #cbd5e0;
+      border-radius: 12px;
+      padding: 40px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      background: #f7fafc;
+    }
+
+    .upload-area:hover,
+    .upload-area.dragover {
+      border-color: #667eea;
+      background: #edf2ff;
+    }
+
+    .upload-icon {
+      font-size: 3em;
+      margin-bottom: 15px;
+    }
+
+    .upload-text {
+      font-size: 1.1em;
+      color: #4a5568;
+      margin-bottom: 8px;
+    }
+
+    .upload-hint {
+      font-size: 0.9em;
+      color: #718096;
+    }
+
+    #fileInput {
+      display: none;
+    }
+
+    /* ===== 图片预览 ===== */
+    .preview-container {
+      display: none;
+      margin-top: 20px;
+      text-align: center;
+    }
+
+    .preview-container.show {
+      display: block;
+    }
+
+    .preview-img {
+      max-width: 100%;
+      max-height: 400px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .preview-actions {
+      margin-top: 15px;
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    /* ===== 按钮样式 ===== */
+    .btn {
+      padding: 12px 28px;
+      border: none;
+      border-radius: 8px;
+      font-size: 1em;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .btn-secondary {
+      background: #e2e8f0;
+      color: #4a5568;
+    }
+
+    .btn-secondary:hover {
+      background: #cbd5e0;
+    }
+
+    /* ===== 加载状态 ===== */
+    .loading {
+      display: none;
+      text-align: center;
+      padding: 30px;
+    }
+
+    .loading.show {
+      display: block;
+    }
+
+    .spinner {
+      width: 50px;
+      height: 50px;
+      border: 4px solid #e2e8f0;
+      border-top-color: #667eea;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 15px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .loading-text {
+      color: #4a5568;
+      font-size: 1.05em;
+    }
+
+    /* ===== OCR 结果区域 ===== */
+    .ocr-result-container {
+      display: none;
+    }
+
+    .ocr-result-container.show {
+      display: block;
+    }
+
+    .ocr-textarea {
+      width: 100%;
+      min-height: 200px;
+      padding: 15px;
+      border: 2px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 1em;
+      line-height: 1.6;
+      resize: vertical;
+      font-family: inherit;
+      transition: border-color 0.3s;
+    }
+
+    .ocr-textarea:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .ocr-tip {
+      background: #fffbeb;
+      border-left: 4px solid #f59e0b;
+      padding: 12px 16px;
+      border-radius: 0 8px 8px 0;
+      margin-bottom: 15px;
+      font-size: 0.95em;
+      color: #92400e;
+    }
+
+    .grade-btn-container {
+      text-align: center;
+      margin-top: 20px;
+    }
+
+    /* ===== 批改结果区域 ===== */
+    .result-container {
+      display: none;
+    }
+
+    .result-container.show {
+      display: block;
+    }
+
+    /* 总分展示 */
+    .total-score-box {
+      text-align: center;
+      padding: 30px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 12px;
+      color: white;
+      margin-bottom: 25px;
+    }
+
+    .total-score {
+      font-size: 4em;
+      font-weight: bold;
+      line-height: 1;
+    }
+
+    .total-score .max {
+      font-size: 0.5em;
+      opacity: 0.8;
+    }
+
+    .score-label {
+      font-size: 1.2em;
+      margin-top: 10px;
+      opacity: 0.9;
+    }
+
+    /* 分数分类 */
+    .score-section {
+      margin-bottom: 25px;
+    }
+
+    .score-section-title {
+      font-size: 1.15em;
+      font-weight: 600;
+      color: #2d3748;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #e2e8f0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .score-section-title .section-total {
+      font-size: 0.9em;
+      color: #667eea;
+      font-weight: bold;
+    }
+
+    .score-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding: 10px 15px;
+      background: #f7fafc;
+      border-radius: 8px;
+      margin-bottom: 8px;
+    }
+
+    .score-item-name {
+      flex: 1;
+      color: #4a5568;
+    }
+
+    .score-item-name strong {
+      color: #2d3748;
+    }
+
+    .score-item-comment {
+      font-size: 0.9em;
+      color: #718096;
+      margin-top: 4px;
+    }
+
+    .score-item-score {
+      font-weight: bold;
+      color: #667eea;
+      font-size: 1.1em;
+      margin-left: 15px;
+      white-space: nowrap;
+    }
+
+    .score-item-score.full {
+      color: #48bb78;
+    }
+
+    .score-item-score.low {
+      color: #f56565;
+    }
+
+    /* 语法错误 */
+    .error-list {
+      list-style: none;
+    }
+
+    .error-item {
+      background: #fff5f5;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 10px;
+      border-left: 4px solid #f56565;
+    }
+
+    .error-original {
+      text-decoration: line-through;
+      color: #e53e3e;
+      font-family: monospace;
+      background: #fed7d7;
+      padding: 2px 6px;
+      border-radius: 4px;
+      display: inline-block;
+      margin-bottom: 6px;
+    }
+
+    .error-corrected {
+      color: #38a169;
+      font-family: monospace;
+      background: #c6f6d5;
+      padding: 2px 6px;
+      border-radius: 4px;
+      display: inline-block;
+      margin-bottom: 6px;
+    }
+
+    .error-arrow {
+      margin: 0 8px;
+      color: #718096;
+    }
+
+    .error-explanation {
+      font-size: 0.9em;
+      color: #4a5568;
+      margin-top: 6px;
+    }
+
+    .error-deduction {
+      float: right;
+      background: #fc8181;
+      color: white;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 0.85em;
+    }
+
+    /* 缺少要点 */
+    .missing-list {
+      list-style: none;
+    }
+
+    .missing-item {
+      background: #fffbeb;
+      border-radius: 8px;
+      padding: 12px 15px;
+      margin-bottom: 8px;
+      border-left: 4px solid #f59e0b;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .missing-item .warning-icon {
+      color: #f59e0b;
+      font-size: 1.2em;
+    }
+
+    /* 总体评价 */
+    .overall-comment {
+      background: #f0fff4;
+      border-radius: 8px;
+      padding: 18px;
+      border-left: 4px solid #48bb78;
+      line-height: 1.7;
+    }
+
+    /* 修改建议 */
+    .suggestions-list {
+      list-style: none;
+      counter-reset: suggestion;
+    }
+
+    .suggestion-item {
+      padding: 12px 15px 12px 45px;
+      background: #ebf8ff;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      position: relative;
+      line-height: 1.6;
+    }
+
+    .suggestion-item::before {
+      counter-increment: suggestion;
+      content: counter(suggestion);
+      position: absolute;
+      left: 15px;
+      top: 12px;
+      width: 22px;
+      height: 22px;
+      background: #4299e1;
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.85em;
+      font-weight: bold;
+    }
+
+    /* 错误提示 */
+    .error-message {
+      background: #fff5f5;
+      border: 1px solid #feb2b2;
+      color: #c53030;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      display: none;
+    }
+
+    .error-message.show {
+      display: block;
+    }
+
+    /* ===== 全屏按钮 ===== */
+    .fullscreen-btn {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: white;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      font-size: 1.3em;
+      z-index: 100;
+      transition: transform 0.3s;
+    }
+
+    .fullscreen-btn:hover {
+      transform: scale(1.1);
+    }
+
+    /* ===== 响应式 ===== */
+    @media (max-width: 640px) {
+      body {
+        padding: 10px;
+      }
+
+      .header h1 {
+        font-size: 1.6em;
+      }
+
+      .card {
+        padding: 20px;
+      }
+
+      .total-score {
+        font-size: 3em;
+      }
+
+      .upload-area {
+        padding: 30px 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- 全屏按钮 -->
+  <button class="fullscreen-btn" onclick="toggleFullscreen()" title="全屏">⛶</button>
+
+  <div class="container">
+    <!-- 头部 -->
+    <div class="header">
+      <h1>✍️ 智能英语作文批改</h1>
+      <p>上传手写作文照片，AI 自动识别并智能批改</p>
+      <div class="topic-box">
+        📝 作文题目：<span>Should friends be similar or different?</span>
+      </div>
+    </div>
+
+    <!-- 上传区域 -->
+    <div class="card" id="uploadCard">
+      <div class="card-title">
+        <span class="icon">📷</span>
+        <span>上传作文照片</span>
+      </div>
+
+      <div class="upload-area" id="uploadArea">
+        <div class="upload-icon">📄</div>
+        <div class="upload-text">点击或拖拽图片到此处上传</div>
+        <div class="upload-hint">支持 JPG、PNG、GIF、BMP 格式，图片大小不超过 10MB</div>
+      </div>
+      <input type="file" id="fileInput" accept="image/*">
+
+      <!-- 图片预览 -->
+      <div class="preview-container" id="previewContainer">
+        <img class="preview-img" id="previewImg" alt="预览图片">
+        <div class="preview-actions">
+          <button class="btn btn-secondary" onclick="clearUpload()">🔄 重新上传</button>
+          <button class="btn btn-primary" onclick="startOCR()" id="ocrBtn">🔍 开始识别文字</button>
+        </div>
+      </div>
+
+      <!-- OCR 加载中 -->
+      <div class="loading" id="ocrLoading">
+        <div class="spinner"></div>
+        <div class="loading-text">正在识别文字，请稍候...</div>
+      </div>
+
+      <!-- 错误提示 -->
+      <div class="error-message" id="uploadError"></div>
+    </div>
+
+    <!-- OCR 识别结果 -->
+    <div class="card ocr-result-container" id="ocrResultCard">
+      <div class="card-title">
+        <span class="icon">📝</span>
+        <span>识别结果（可修改）</span>
+      </div>
+
+      <div class="ocr-tip">
+        💡 提示：请检查识别结果，如有错误可以直接修改，确认无误后再提交批改。
+      </div>
+
+      <textarea class="ocr-textarea" id="ocrTextarea" placeholder="识别出的作文内容将显示在这里..."></textarea>
+
+      <div class="grade-btn-container">
+        <button class="btn btn-primary" onclick="startGrading()" id="gradeBtn">
+          ✨ 开始智能批改
+        </button>
+      </div>
+
+      <!-- 批改加载中 -->
+      <div class="loading" id="gradeLoading">
+        <div class="spinner"></div>
+        <div class="loading-text">AI 老师正在认真批改，请稍候...</div>
+      </div>
+
+      <!-- 错误提示 -->
+      <div class="error-message" id="gradeError"></div>
+    </div>
+
+    <!-- 批改结果 -->
+    <div class="card result-container" id="resultCard">
+      <div class="card-title">
+        <span class="icon">📊</span>
+        <span>批改结果</span>
+      </div>
+
+      <!-- 总分 -->
+      <div class="total-score-box">
+        <div class="total-score">
+          <span id="totalScore">0</span><span class="max"> / 10</span>
+        </div>
+        <div class="score-label">总分</div>
+      </div>
+
+      <!-- 内容分 -->
+      <div class="score-section">
+        <div class="score-section-title">
+          <span>📖 Content 内容（6分）</span>
+          <span class="section-total" id="contentTotal">0 / 6</span>
+        </div>
+        <div id="contentScoreList"></div>
+      </div>
+
+      <!-- 结构分 -->
+      <div class="score-section">
+        <div class="score-section-title">
+          <span>🏗️ Structure 结构（2分）</span>
+          <span class="section-total" id="structureTotal">0 / 2</span>
+        </div>
+        <div id="structureScoreList"></div>
+      </div>
+
+      <!-- 语言分 -->
+      <div class="score-section">
+        <div class="score-section-title">
+          <span>💬 Language 语言（2分）</span>
+          <span class="section-total" id="languageTotal">0 / 2</span>
+        </div>
+        <div id="languageScoreList"></div>
+      </div>
+
+      <!-- 语法错误 -->
+      <div class="score-section" id="grammarSection">
+        <div class="score-section-title">
+          <span>❌ 语法错误与修改</span>
+          <span class="section-total" id="grammarCount">0 处</span>
+        </div>
+        <ul class="error-list" id="grammarErrorList"></ul>
+      </div>
+
+      <!-- 缺少要点 -->
+      <div class="score-section" id="missingSection">
+        <div class="score-section-title">
+          <span>⚠️ 缺少要点</span>
+        </div>
+        <ul class="missing-list" id="missingList"></ul>
+      </div>
+
+      <!-- 总体评价 -->
+      <div class="score-section">
+        <div class="score-section-title">
+          <span>💡 总体评价</span>
+        </div>
+        <div class="overall-comment" id="overallComment"></div>
+      </div>
+
+      <!-- 修改建议 -->
+      <div class="score-section">
+        <div class="score-section-title">
+          <span>📌 修改建议</span>
+        </div>
+        <ul class="suggestions-list" id="suggestionsList"></ul>
+      </div>
+
+      <div style="text-align: center; margin-top: 25px;">
+        <button class="btn btn-secondary" onclick="resetAll()">🔄 再批一篇</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ===== 全局变量 =====
+    let selectedFile = null;
+
+    // ===== DOM 元素 =====
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInput = document.getElementById('fileInput');
+    const previewContainer = document.getElementById('previewContainer');
+    const previewImg = document.getElementById('previewImg');
+    const ocrLoading = document.getElementById('ocrLoading');
+    const ocrResultCard = document.getElementById('ocrResultCard');
+    const ocrTextarea = document.getElementById('ocrTextarea');
+    const gradeLoading = document.getElementById('gradeLoading');
+    const resultCard = document.getElementById('resultCard');
+    const uploadError = document.getElementById('uploadError');
+    const gradeError = document.getElementById('gradeError');
+
+    // ===== 上传功能 =====
+    // 点击上传区域
+    uploadArea.addEventListener('click', () => fileInput.click());
+
+    // 文件选择
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files.length > 0) {
+        handleFile(e.target.files[0]);
+      }
+    });
+
+    // 拖拽上传
+    uploadArea.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      uploadArea.classList.add('dragover');
+    });
+
+    uploadArea.addEventListener('dragleave', () => {
+      uploadArea.classList.remove('dragover');
+    });
+
+    uploadArea.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadArea.classList.remove('dragover');
+      if (e.dataTransfer.files.length > 0) {
+        handleFile(e.dataTransfer.files[0]);
+      }
+    });
+
+    /**
+     * 处理选中的文件
+     * @param {File} file 图片文件
+     */
+    function handleFile(file) {
+      hideError(uploadError);
+
+      // 检查文件类型
+      if (!file.type.startsWith('image/')) {
+        showError(uploadError, '请上传图片文件');
+        return;
+      }
+
+      // 检查文件大小（10MB）
+      if (file.size > 10 * 1024 * 1024) {
+        showError(uploadError, '图片大小不能超过 10MB');
+        return;
+      }
+
+      selectedFile = file;
+
+      // 显示预览
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        previewImg.src = e.target.result;
+        previewContainer.classList.add('show');
+      };
+      reader.readAsDataURL(file);
+    }
+
+    /**
+     * 清除上传
+     */
+    function clearUpload() {
+      selectedFile = null;
+      fileInput.value = '';
+      previewContainer.classList.remove('show');
+      previewImg.src = '';
+      ocrResultCard.classList.remove('show');
+      resultCard.classList.remove('show');
+      hideError(uploadError);
+      hideError(gradeError);
+    }
+
+    // ===== OCR 识别 =====
+    /**
+     * 开始 OCR 文字识别
+     */
+    async function startOCR() {
+      if (!selectedFile) {
+        showError(uploadError, '请先选择图片');
+        return;
+      }
+
+      const ocrBtn = document.getElementById('ocrBtn');
+      ocrBtn.disabled = true;
+      ocrLoading.classList.add('show');
+      hideError(uploadError);
+
+      try {
+        const formData = new FormData();
+        formData.append('image', selectedFile);
+
+        const response = await fetch('/api/ocr', {
+          method: 'POST',
+          body: formData
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          ocrTextarea.value = data.text;
+          ocrResultCard.classList.add('show');
+          // 滚动到识别结果
+          ocrResultCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } else {
+          showError(uploadError, '识别失败：' + data.error);
+        }
+      } catch (error) {
+        showError(uploadError, '网络错误，请稍后重试');
+        console.error('OCR 错误：', error);
+      } finally {
+        ocrBtn.disabled = false;
+        ocrLoading.classList.remove('show');
+      }
+    }
+
+    // ===== 作文批改 =====
+    /**
+     * 开始智能批改
+     */
+    async function startGrading() {
+      const text = ocrTextarea.value.trim();
+
+      if (text.length < 10) {
+        showError(gradeError, '作文内容太短，请确保识别正确');
+        return;
+      }
+
+      const gradeBtn = document.getElementById('gradeBtn');
+      gradeBtn.disabled = true;
+      gradeLoading.classList.add('show');
+      hideError(gradeError);
+      resultCard.classList.remove('show');
+
+      try {
+        const response = await fetch('/api/grade', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ text: text })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          displayResult(data.result);
+          resultCard.classList.add('show');
+          // 滚动到结果
+          resultCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } else {
+          showError(gradeError, '批改失败：' + data.error);
+        }
+      } catch (error) {
+        showError(gradeError, '网络错误，请稍后重试');
+        console.error('批改错误：', error);
+      } finally {
+        gradeBtn.disabled = false;
+        gradeLoading.classList.remove('show');
+      }
+    }
+
+    /**
+     * 显示批改结果
+     * @param {object} result 批改结果数据
+     */
+    function displayResult(result) {
+      // 总分
+      document.getElementById('totalScore').textContent = result.totalScore ?? 0;
+
+      // 内容分
+      const content = result.contentScore || {};
+      let contentTotal = 0;
+      let contentMax = 0;
+      const contentItems = [
+        { key: 'topicSentence', name: 'Opinion (Topic sentence) 主题句', data: content.topicSentence },
+        { key: 'reasons', name: 'Reasons 理由', data: content.reasons },
+        { key: 'examples', name: 'Examples 例子', data: content.examples },
+        { key: 'saying', name: 'Opinion (Saying) 总结/名言', data: content.saying }
+      ];
+
+      const contentList = document.getElementById('contentScoreList');
+      contentList.innerHTML = '';
+      contentItems.forEach(item => {
+        if (item.data) {
+          contentTotal += item.data.score || 0;
+          contentMax += item.data.maxScore || 0;
+          contentList.innerHTML += createScoreItem(item.name, item.data);
+        }
+      });
+      document.getElementById('contentTotal').textContent = `${contentTotal} / ${contentMax || 6}`;
+
+      // 结构分
+      const structure = result.structureScore || {};
+      let structureTotal = 0;
+      let structureMax = 0;
+      const structureItems = [
+        { key: 'paragraphs', name: 'More than two paragraphs 超过2段', data: structure.paragraphs },
+        { key: 'linkingWords', name: 'More than two linking words 连接词', data: structure.linkingWords }
+      ];
+
+      const structureList = document.getElementById('structureScoreList');
+      structureList.innerHTML = '';
+      structureItems.forEach(item => {
+        if (item.data) {
+          structureTotal += item.data.score || 0;
+          structureMax += item.data.maxScore || 0;
+          structureList.innerHTML += createScoreItem(item.name, item.data);
+        }
+      });
+      document.getElementById('structureTotal').textContent = `${structureTotal} / ${structureMax || 2}`;
+
+      // 语言分
+      const language = result.languageScore || {};
+      let languageTotal = 0;
+      let languageMax = 0;
+      const languageItems = [
+        { key: 'comparatives', name: 'Use comparatives 比较级', data: language.comparatives }
+      ];
+
+      const languageList = document.getElementById('languageScoreList');
+      languageList.innerHTML = '';
+      languageItems.forEach(item => {
+        if (item.data) {
+          languageTotal += item.data.score || 0;
+          languageMax += item.data.maxScore || 0;
+          languageList.innerHTML += createScoreItem(item.name, item.data);
+        }
+      });
+      document.getElementById('languageTotal').textContent = `${languageTotal} / ${languageMax || 2}`;
+
+      // 语法错误
+      const grammarErrors = result.grammarErrors || [];
+      document.getElementById('grammarCount').textContent = `${grammarErrors.length} 处`;
+      const grammarList = document.getElementById('grammarErrorList');
+      grammarList.innerHTML = '';
+
+      if (grammarErrors.length === 0) {
+        document.getElementById('grammarSection').style.display = 'none';
+      } else {
+        document.getElementById('grammarSection').style.display = 'block';
+        grammarErrors.forEach(error => {
+          grammarList.innerHTML += `
+            <li class="error-item">
+              <span class="error-deduction">-${error.deduction || 0.3}分</span>
+              <div>
+                <span class="error-original">${escapeHtml(error.original || '')}</span>
+                <span class="error-arrow">→</span>
+                <span class="error-corrected">${escapeHtml(error.corrected || '')}</span>
+              </div>
+              <div class="error-explanation">📌 ${escapeHtml(error.explanation || '')}</div>
+            </li>
+          `;
+        });
+      }
+
+      // 缺少要点
+      const missingPoints = result.missingPoints || [];
+      const missingList = document.getElementById('missingList');
+      missingList.innerHTML = '';
+
+      if (missingPoints.length === 0) {
+        document.getElementById('missingSection').style.display = 'none';
+      } else {
+        document.getElementById('missingSection').style.display = 'block';
+        missingPoints.forEach(point => {
+          missingList.innerHTML += `
+            <li class="missing-item">
+              <span class="warning-icon">⚠️</span>
+              <span>${escapeHtml(point)}</span>
+            </li>
+          `;
+        });
+      }
+
+      // 总体评价
+      document.getElementById('overallComment').textContent = result.overallComment || '';
+
+      // 修改建议
+      const suggestions = result.suggestions || [];
+      const suggestionsList = document.getElementById('suggestionsList');
+      suggestionsList.innerHTML = '';
+      suggestions.forEach(suggestion => {
+        suggestionsList.innerHTML += `
+          <li class="suggestion-item">${escapeHtml(suggestion)}</li>
+        `;
+      });
+    }
+
+    /**
+     * 创建得分项 HTML
+     * @param {string} name 项目名称
+     * @param {object} data 得分数据
+     */
+    function createScoreItem(name, data) {
+      const score = data.score || 0;
+      const maxScore = data.maxScore || 1;
+      const comment = data.comment || '';
+
+      let scoreClass = '';
+      if (score >= maxScore) {
+        scoreClass = 'full';
+      } else if (score < maxScore * 0.5) {
+        scoreClass = 'low';
+      }
+
+      return `
+        <div class="score-item">
+          <div class="score-item-name">
+            <strong>${escapeHtml(name)}</strong>
+            <div class="score-item-comment">${escapeHtml(comment)}</div>
+          </div>
+          <div class="score-item-score ${scoreClass}">${score} / ${maxScore}</div>
+        </div>
+      `;
+    }
+
+    // ===== 工具函数 =====
+    /**
+     * 显示错误信息
+     */
+    function showError(element, message) {
+      element.textContent = message;
+      element.classList.add('show');
+    }
+
+    /**
+     * 隐藏错误信息
+     */
+    function hideError(element) {
+      element.classList.remove('show');
+    }
+
+    /**
+     * HTML 转义
+     */
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    /**
+     * 重置所有状态
+     */
+    function resetAll() {
+      clearUpload();
+      ocrTextarea.value = '';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    /**
+     * 全屏切换
+     */
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(err => {
+          console.log('全屏失败：', err);
+        });
+      } else {
+        document.exitFullscreen();
+      }
+    }
+  </script>
+</body>
+</html>

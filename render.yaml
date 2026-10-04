@@ -1,0 +1,23 @@
+# Render 部署配置
+# Render 是一个免费的应用托管平台，支持 Node.js 应用
+# 注册地址：https://render.com
+# 部署方式：连接 GitHub 仓库，自动识别并部署
+
+services:
+  - type: web
+    name: essay-grader
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: BAIDU_API_KEY
+        sync: false # 需要在 Render 后台手动设置
+      - key: BAIDU_SECRET_KEY
+        sync: false
+      - key: DEEPSEEK_API_KEY
+        sync: false
+    autoDeploy: yes
+    branch: main
