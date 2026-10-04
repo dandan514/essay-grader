@@ -1,20 +1,15 @@
 {
   "version": 2,
-  "buildCommand": "npm install",
-  "outputDirectory": "public",
-  "functions": {
-    "api/*.js": {
-      "maxDuration": 30
+  "builds": [
+    {
+      "src": "server.js",
+      "use": "@vercel/node"
     }
-  },
-  "rewrites": [
+  ],
+  "routes": [
     {
-      "source": "/api/(.*)",
-      "destination": "/api"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/"
+      "src": "/(.*)",
+      "dest": "server.js"
     }
   ]
 }
