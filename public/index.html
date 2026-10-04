@@ -791,6 +791,23 @@
     /**
      * 开始 OCR 文字识别
      */
+    /**
+     * 将文件转为 base64 字符串
+     * @param {File} file 图片文件
+     * @returns {Promise<string>} base64 字符串
+     */
+    function fileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    /**
+     * 开始 OCR 文字识别
+     */
     async function startOCR() {
       if (!selectedFile) {
         showError(uploadError, '请先选择图片');
@@ -803,12 +820,15 @@
       hideError(uploadError);
 
       try {
-        const formData = new FormData();
-        formData.append('image', selectedFile);
+        // 将图片转为 base64（兼容 Vercel Serverless Functions）
+        const base64 = await fileToBase64(selectedFile);
 
         const response = await fetch('/api/ocr', {
           method: 'POST',
-          body: formData
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ imageBase64: base64 })
         });
 
         const data = await response.json();
